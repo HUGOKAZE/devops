@@ -1,39 +1,36 @@
-name: Auto Deploy  # 🏷️ Nom visible dans l’onglet "Actions" de GitHub
+name: Autodeploy
 
 on:
   push:
-    branches: [ main ]  # 🔁 Déclenchement à chaque push sur main
+    branches: [ main, cicd ]  # Déclenchement sur main et cicd
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest  # 🖥️ L’environnement d’exécution du pipeline
+    runs-on: ubuntu-latest
 
     steps:
-      - name: Cloner le dépôt
+      - name: 📥 Cloner le dépôt
         uses: actions/checkout@v3
-        # ✅ Clone le code source
 
-      - name: Installer Ansible
+      - name: 🛠️ Installer Ansible et Python
         run: |
           sudo apt update
-          sudo apt install -y ansible
-        # ⚙️ Prépare l'environnement pour exécuter le playbook
+          sudo apt install -y ansible python3
 
-      - name: Injecter la clé SSH privée
+      - name: 🔐 Injecter la clé SSH privée
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          echo "${{ secrets.DEPLOY_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-        # 🔐 Monte dynamiquement la clé SSH depuis les secrets GitHub
+          echo "Host *" >> ~/.ssh/config
+          echo "  StrictHostKeyChecking=no" >> ~/.ssh/config
 
-      - name: Créer le fichier inventory.ini
+      - name: 🧾 Créer le fichier inventory.ini
         run: |
           echo "[webserver]" > ansible/inventory.ini
-          echo "${{ secrets.TARGET_IP }} ansible_user=${{ secrets.TARGET_USER }} ansible_ssh_private_key_file=~/.ssh/id_rsa ansible_python_interpreter=/usr/bin/python3" >> ansible/inventory.ini
-        # 📜 Génére dynamiquement le fichier Ansible d'inventaire
+          echo "${{ secrets.TARGET_HOST }} ansible_user=${{ secrets.TARGET_USER }} ansible_ssh_private_key_file=~/.ssh/id_rsa ansible_python_interpreter=/usr/bin/python3" >> ansible/inventory.ini
 
-      - name: Lancer le déploiement
+      - name: 🚀 Lancer le déploiement Ansible
         run: |
           cd ansible
           bash deploy.sh
-        # 🚀 Lance le script Ansible pour tout déployer

@@ -1,0 +1,49 @@
+---
+- name: 🎯 Le rôle {{ role_name }} démarre
+  debug:
+    msg: "Le rôle {{ role_name }} a bien été inclus"
+
+- name: Préparer les fichiers et répertoires de supervision
+  import_tasks: setup.yml
+  when: monitoring_enabled | default(true)
+  tags: monitoring_setup
+
+- name: Vérifier la présence du fichier docker-compose.yml
+  stat:
+    path: "{{ deploy_dir }}/docker-compose.yml"
+  register: compose_file
+  tags: monitoring
+
+- name: Annuler si le fichier docker-compose.yml est absent
+  fail:
+    msg: "❌ Fichier docker-compose.yml introuvable dans {{ deploy_dir }}. Vérifie que setup.yml a bien copié les fichiers."
+  when: not compose_file.stat.exists
+  tags: monitoring
+
+- name: Déployer ou redémarrer les outils de supervision (Prometheus, Grafana, etc.)
+  become: yes
+  block:
+
+    - name: Lancer le stack monitoring avec Docker Compose V2
+      community.docker.docker_compose_v2:
+        project_src: "{{ deploy_dir }}"
+        state: present
+      register: monitoring_result
+      tags: monitoring
+
+  rescue:
+
+    - name: Forcer l’arrêt et la suppression des conteneurs bloqués
+      shell: |
+        docker ps -q --filter "name=myapp" | xargs -r docker stop || true
+        docker ps -aq --filter "name=myapp" | xargs -r docker rm || true
+      ignore_errors: true
+      become: yes
+      tags: monitoring
+
+    - name: Réexécuter le déploiement après nettoyage
+      community.docker.docker_compose_v2:
+        project_src: "{{ deploy_dir }}"
+        state: present
+      become: yes
+      tags: monitoring

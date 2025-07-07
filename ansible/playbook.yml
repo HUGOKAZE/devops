@@ -1,0 +1,22 @@
+- name: Provisionnement complet du serveur web
+  hosts: webserver
+  become: true
+  vars_files:
+    - group_vars/all.yml
+
+  pre_tasks:
+    - name: Vérification de connexion et affichage de l'hôte distant
+      debug:
+        msg: "✅ Déploiement en cours sur {{ inventory_hostname }}"
+
+  roles:
+    - docker
+    - trivy
+    - security
+    - app
+    - monitoring
+
+  post_tasks:
+    - name: ✅ Fin du playbook
+      debug:
+        msg: "🎉 Déploiement terminé sur {{ inventory_hostname }}"

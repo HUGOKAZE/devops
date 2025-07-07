@@ -1,0 +1,35 @@
+- name: 🎯 Le rôle {{ role_name }} démarre
+  debug:
+    msg: "Le rôle {{ role_name }} a bien été inclus"
+
+- name: Autoriser les ports essentiels avec UFW
+  ufw:
+    rule: allow
+    port: "{{ item }}"
+  with_items:
+    - 22
+    - 8080
+    - 8081
+    - 3000
+    - 9090
+    - 8082
+
+- name: Activer le pare-feu UFW
+  ufw:
+    state: enabled
+    policy: deny
+
+- name: Installer Fail2Ban
+  apt:
+    name: fail2ban
+    state: present
+
+- name: Appliquer des réglages sysctl de sécurité
+  sysctl:
+    name: "{{ item.key }}"
+    value: "{{ item.value }}"
+    state: present
+    reload: yes
+  loop:
+    - { key: 'net.ipv4.ip_forward', value: '1' }
+    - { key: 'net.bridge.bridge-nf-call-iptables', value: '1' }

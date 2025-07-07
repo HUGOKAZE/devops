@@ -1,0 +1,13 @@
+- name: Installer Docker et ses dépendances
+  apt:
+    name: [apt-transport-https, ca-certificates, curl, software-properties-common]
+    update_cache: yes
+
+- name: Installer Docker
+  shell: curl -fsSL https://get.docker.com | sh
+
+- name: Installer Docker Compose
+  get_url:
+    url: https://github.com/docker/compose/releases/download/v2.24.5/docker-compose-linux-x86_64
+    dest: /usr/local/bin/docker-compose
+    mode: '0755'

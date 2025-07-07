@@ -1,0 +1,117 @@
+
+services:
+  web:
+    build: .
+    ports:
+      - "8089:80" # Accédez à votre application PHP sur http://localhost:8089
+    volumes:
+      - ./project:/var/www/html/ # CORRIGÉ : Assurez-vous qu'il n'y ait pas de faute de frappe ici
+    depends_on:
+      - db
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+    
+    cap_drop:
+      - ALL
+    tmpfs:
+      - /tmp
+    networks:
+      - frontend
+      - backend
+
+  db:
+    image: mysql:5.7
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+    volumes:
+      - dbdata:/var/lib/mysql # Volume nommé pour les données persistantes de la BDD
+      - ./job.sql:/docker-entrypoint-initdb.d/job.sql # Initialise la BDD avec votre fichier SQL
+    
+    networks:
+      - backend
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    restart: always
+    ports:
+      - "8085:80" # Accédez à phpMyAdmin sur http://localhost:8085
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+   
+    cap_drop:
+      - ALL
+    tmpfs:
+      - /tmp
+    networks:
+      - backend
+
+  prometheus:
+    image: prom/prometheus
+    # Assurez-vous d'avoir un dossier 'prometheus' à côté de votre docker-compose.yml
+    # et qu'il contienne votre fichier de configuration prometheus.yml.
+    volumes:
+      - ./prometheus:/etc/prometheus 
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+    ports:
+      - "9090:9090" # Accédez à l'interface utilisateur de Prometheus sur http://localhost:9090
+    networks:
+      - backend
+
+  grafana:
+    image: grafana/grafana:10.0.0 # Il est bon de spécifier la version exacte pour la stabilité
+    ports:
+      - "3000:3000" # Accédez à l'interface utilisateur de Grafana sur http://localhost:3001
+    volumes:
+      - grafana_data:/var/lib/grafana # Utilisation du volume nommé pour la persistance
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin # IMPORTANT : Changez ceci pour la production !
+      # Les lignes GF_INSTALL_PLUGINS et GF_INSTALL_IMAGE_RENDERER_PLUGIN sont supprimées ici
+    depends_on:
+      - prometheus # Gardez cette dépendance si prometheus est toujours un service requis
+    networks:
+      - frontend
+      - backend
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    ports:
+      - "8083:8080" # Accédez à l'interface utilisateur de cAdvisor sur http://localhost:8083
+    volumes:
+      # Ces volumes sont nécessaires pour que cAdvisor puisse surveiller l'hôte
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      # Assurez-vous d'avoir la configuration AppArmor/SELinux nécessaire si besoin
+      # sur votre hôte Ubuntu pour que cAdvisor accède aux ressources de l'hôte.
+    cap_drop:
+      - ALL
+    tmpfs:
+      - /tmp
+    networks:
+      - backend
+
+  node-exporter:
+    image: prom/node-exporter
+    container_name: node-exporter # Bon de nommer explicitement
+    ports:
+      - "9100:9100" # Accédez aux métriques de Node Exporter sur http://localhost:9100
+    networks:
+      - backend
+
+# ---
+# Définir les volumes nommés pour les données persistantes
+volumes:
+  dbdata: # Pour les données MySQL
+  grafana_data: # Pour les données Grafana
+
+# ---
+# Définir les réseaux
+networks:
+  frontend:
+  backend:

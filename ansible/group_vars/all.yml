@@ -1,0 +1,6 @@
+
+docker_user: "{{ ansible_user | default('ubuntu') }}"
+app_port: 8088
+mysql_root_password: root
+mysql_database: job_db
+deploy_dir: /opt/myapp

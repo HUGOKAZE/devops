@@ -1,0 +1,39 @@
+name: Auto Deploy  # 🏷️ Nom visible dans l’onglet "Actions" de GitHub
+
+on:
+  push:
+    branches: [ main ]  # 🔁 Déclenchement à chaque push sur main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest  # 🖥️ L’environnement d’exécution du pipeline
+
+    steps:
+      - name: Cloner le dépôt
+        uses: actions/checkout@v3
+        # ✅ Clone le code source
+
+      - name: Installer Ansible
+        run: |
+          sudo apt update
+          sudo apt install -y ansible
+        # ⚙️ Prépare l'environnement pour exécuter le playbook
+
+      - name: Injecter la clé SSH privée
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+        # 🔐 Monte dynamiquement la clé SSH depuis les secrets GitHub
+
+      - name: Créer le fichier inventory.ini
+        run: |
+          echo "[webserver]" > ansible/inventory.ini
+          echo "${{ secrets.TARGET_IP }} ansible_user=${{ secrets.TARGET_USER }} ansible_ssh_private_key_file=~/.ssh/id_rsa ansible_python_interpreter=/usr/bin/python3" >> ansible/inventory.ini
+        # 📜 Génére dynamiquement le fichier Ansible d'inventaire
+
+      - name: Lancer le déploiement
+        run: |
+          cd ansible
+          bash deploy.sh
+        # 🚀 Lance le script Ansible pour tout déployer

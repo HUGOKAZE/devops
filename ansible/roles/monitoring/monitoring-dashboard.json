@@ -1,0 +1,71 @@
+{
+  "title": "Monitoring Hugo",
+  "timezone": "browser",
+  "panels": [
+    {
+      "type": "gauge",
+      "title": "CPU Utilisation - 192.168.1.111",
+      "targets": [
+        {
+          "expr": "100 - (avg by(instance) (rate(node_cpu_seconds_total{mode=\"idle\",instance=\"192.168.1.111:9100\"}[1m])) * 100)",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent"
+        }
+      }
+    },
+    {
+      "type": "gauge",
+      "title": "RAM Utilisée - 192.168.1.111",
+      "targets": [
+        {
+          "expr": "(node_memory_MemTotal_bytes{instance=\"192.168.1.111:9100\"} - node_memory_MemAvailable_bytes{instance=\"192.168.1.111:9100\"}) / node_memory_MemTotal_bytes{instance=\"192.168.1.111:9100\"} * 100",
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent"
+        }
+      }
+    },
+    {
+      "type": "table",
+      "title": "Conteneurs actifs - 192.168.1.111",
+      "targets": [
+        {
+          "expr": "container_last_seen{instance=\"192.168.1.111:8082\"}",
+          "refId": "C"
+        }
+      ],
+      "columns": [],
+      "transformations": []
+    },
+    {
+      "type": "stat",
+      "title": "Node Exporter - statut",
+      "targets": [
+        {
+          "expr": "up{instance=\"192.168.1.111:9100\"}",
+          "refId": "D"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "cAdvisor - statut",
+      "targets": [
+        {
+          "expr": "up{instance=\"192.168.1.111:8082\"}",
+          "refId": "E"
+        }
+      ]
+    }
+  ],
+  "schemaVersion": 36,
+  "version": 1,
+  "refresh": "30s"
+}
